@@ -3,6 +3,7 @@ from app.routes.health_route import router as health_router
 from app.routes.nlu_route import router as nlu_router
 from app.routes.preference_route import router as preference_router
 from app.routes.stt_route import router as stt_router
+from app.routes.voice_process_route import router as voice_process_router
 
 __all__ = [
     "health_router",
@@ -10,4 +11,5 @@ __all__ = [
     "nlu_router",
     "briefing_router",
     "preference_router",
+    "voice_process_router",
 ]

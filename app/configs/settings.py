@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +27,13 @@ class Settings(BaseSettings):
     tts_rate: str = "+0%"
     tts_volume: str = "+0%"
     tts_pitch: str = "+0Hz"
+
+    # Valkey / Redis / BullMQ Config
+    valkey_host: str = "localhost"
+    valkey_port: int = 6379
+    valkey_password: Optional[str] = None
+    voice_queue_name: str = "subway-voice"
+    enable_bullmq_worker: bool = False
 
     # Station Data Path
     subway_stations_file: str = os.path.join(

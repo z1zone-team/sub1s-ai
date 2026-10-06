@@ -4,9 +4,13 @@ from app.dtos.request_dto import RouteMode
 
 
 class HealthResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     status: str = Field(default="ok", description="서버 상태")
     service: str = Field(default="sub1s-ai", description="서비스명")
     whisper_model: str = Field(description="로드된 Whisper 모델")
+    station_count: int = Field(default=0, alias="stationCount", description="인덱싱된 지하철 역 개수")
+    valkey_status: str = Field(default="unknown", alias="valkeyStatus", description="Valkey(Redis) 연결 상태")
 
 
 class SttResponseDto(BaseModel):
@@ -90,3 +94,16 @@ class VoiceSummaryResponseDto(BaseModel):
         alias="audioTtsUrl",
         description="Edge-TTS 오디오 스트리밍 엔드포인트 URL",
     )
+
+
+class VoiceProcessResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    transcript: str = Field(..., description="STT 음성 전사 텍스트")
+    origin_station_name: str = Field(..., alias="originStationName", description="출발역 이름")
+    dest_station_name: str = Field(..., alias="destStationName", description="도착역 이름")
+    preferred_mode: RouteMode = Field(..., alias="preferredMode", description="추천 경로 모드")
+    reason: str = Field(..., description="의도 분석 사유")
+    confidence: float = Field(0.95, description="신뢰도")
+    is_fallback: bool = Field(False, alias="isFallback", description="Fallback 안전망 적용 여부")
+    processing_time_sec: float = Field(0.0, alias="processingTimeSec", description="총 처리 소요 시간(초)")
