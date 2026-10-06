@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +18,15 @@ class Settings(BaseSettings):
 
     # Gemini Config
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    nlu_timeout_sec: float = 2.0  # 2초 SLA 타임아웃
+
+    # Station Data Path
+    subway_stations_file: str = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "data",
+        "subway_stations.json",
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
