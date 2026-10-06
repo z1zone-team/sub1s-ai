@@ -7,6 +7,10 @@ from google.genai import types
 import json_repair
 
 from app.configs.settings import settings
+from app.prompts.briefing_prompt import (
+    BRIEFING_SYSTEM_PROMPT,
+    build_briefing_user_prompt,
+)
 from app.prompts.nlu_prompt import NLU_SYSTEM_PROMPT, build_nlu_user_prompt
 
 logger = logging.getLogger(__name__)
@@ -51,6 +55,26 @@ class GeminiClient:
             return parsed
         return None
 
+    def _sync_generate_briefing(self, prompt: str) -> Optional[str]:
+        if not self._client:
+            return None
+
+        config = types.GenerateContentConfig(
+            system_instruction=BRIEFING_SYSTEM_PROMPT,
+            temperature=0.3,
+        )
+
+        response = self._client.models.generate_content(
+            model=settings.gemini_model,
+            contents=prompt,
+            config=config,
+        )
+
+        if not response or not response.text:
+            return None
+
+        return response.text.strip()
+
     async def generate_nlu(
         self, user_text: str, timeout: Optional[float] = None
     ) -> Optional[Dict[str, Any]]:
@@ -77,4 +101,41 @@ class GeminiClient:
             return None
         except Exception as e:
             logger.warning(f"[GeminiClient] Gemini API call failed: {e}")
+            return None
+
+    async def generate_briefing(
+        self,
+        origin: str,
+        dest: str,
+        mode_label: str,
+        duration_min: int,
+        transfer_count: int,
+        tips: str,
+        timeout: Optional[float] = None,
+    ) -> Optional[str]:
+        """
+        Gemini 모델을 호출하여 자연스러운 2문장 음성 브리핑 멘트를 생성합니다.
+        2초 타임아웃 또는 에러 시 None을 반환하여 규칙 기반 템플릿으로 연결합니다.
+        """
+        if not self._client or not self.api_key:
+            return None
+
+        timeout_sec = timeout or settings.nlu_timeout_sec
+        prompt = build_briefing_user_prompt(
+            origin, dest, mode_label, duration_min, transfer_count, tips
+        )
+
+        try:
+            result = await asyncio.wait_for(
+                asyncio.to_thread(self._sync_generate_briefing, prompt),
+                timeout=timeout_sec,
+            )
+            return result
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"[GeminiClient] SLA timeout ({timeout_sec}s) exceeded for Briefing request."
+            )
+            return None
+        except Exception as e:
+            logger.warning(f"[GeminiClient] Gemini Briefing call failed: {e}")
             return None

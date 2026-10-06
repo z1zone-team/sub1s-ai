@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     nlu_timeout_sec: float = 2.0  # 2초 SLA 타임아웃
 
+    # Edge-TTS Config
+    tts_voice: str = "ko-KR-SunHiNeural"  # Microsoft 신경망 한국어 여성 음성
+    tts_rate: str = "+0%"
+    tts_volume: str = "+0%"
+    tts_pitch: str = "+0Hz"
+
     # Station Data Path
     subway_stations_file: str = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

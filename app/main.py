@@ -7,6 +7,7 @@ from app.configs.settings import settings
 from app.errors.error_handler import register_error_handlers
 from app.guardrails.station_validator import StationValidator
 from app.pipelines.stt_pipeline import stt_pipeline
+from app.routes.briefing_route import router as briefing_router
 from app.routes.health_route import router as health_router
 from app.routes.nlu_route import router as nlu_router
 from app.routes.stt_route import router as stt_router
@@ -60,6 +61,7 @@ register_error_handlers(app)
 app.include_router(health_router)
 app.include_router(stt_router)
 app.include_router(nlu_router)
+app.include_router(briefing_router)
 
 
 if __name__ == "__main__":
