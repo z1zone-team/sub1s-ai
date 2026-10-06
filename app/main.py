@@ -5,9 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.configs.settings import settings
 from app.errors.error_handler import register_error_handlers
-from app.routes.health_route import router as health_router
-from app.routes.stt_route import router as stt_router
+from app.guardrails.station_validator import StationValidator
 from app.pipelines.stt_pipeline import stt_pipeline
+from app.routes.health_route import router as health_router
+from app.routes.nlu_route import router as nlu_router
+from app.routes.stt_route import router as stt_router
 
 logging.basicConfig(
     level=logging.INFO if not settings.debug else logging.DEBUG,
@@ -19,11 +21,18 @@ logger = logging.getLogger("sub1s-ai")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Initializing Sub1S AI Service...")
-    # Whisper 모델 백그라운드 워밍업 시도
+    # Whisper 모델 및 지하철 역명 사전 워밍업
+    try:
+        StationValidator.get_instance()
+        logger.info("StationValidator dictionary warmed up.")
+    except Exception as e:
+        logger.warning(f"StationValidator warmup failed: {e}")
+
     try:
         stt_pipeline.load_model()
     except Exception as e:
         logger.warning(f"Whisper warmup deferred: {e}")
+
     yield
     logger.info("Shutting down Sub1S AI Service...")
 
@@ -50,6 +59,7 @@ register_error_handlers(app)
 # 라우터 등록
 app.include_router(health_router)
 app.include_router(stt_router)
+app.include_router(nlu_router)
 
 
 if __name__ == "__main__":
