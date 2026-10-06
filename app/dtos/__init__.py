@@ -1,3 +1,9 @@
+from app.dtos.preference_dto import (
+    PreferenceVectorRequestDto,
+    PreferenceVectorResponseDto,
+    RoutePreferenceWeightsDto,
+    TripRecordDto,
+)
 from app.dtos.request_dto import (
     BriefingRequestDto,
     NluRequestDto,
@@ -12,6 +18,7 @@ from app.dtos.response_dto import (
     HealthResponseDto,
     NluResponseDto,
     SttResponseDto,
+    VoiceProcessResponseDto,
     VoiceSummaryResponseDto,
 )
 
@@ -28,4 +35,9 @@ __all__ = [
     "VoiceSummaryRequestDto",
     "BriefingResponseDto",
     "VoiceSummaryResponseDto",
+    "VoiceProcessResponseDto",
+    "TripRecordDto",
+    "PreferenceVectorRequestDto",
+    "RoutePreferenceWeightsDto",
+    "PreferenceVectorResponseDto",
 ]

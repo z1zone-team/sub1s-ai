@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from typing import Optional
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,6 +13,8 @@ from app.routes.health_route import router as health_router
 from app.routes.nlu_route import router as nlu_router
 from app.routes.preference_route import router as preference_router
 from app.routes.stt_route import router as stt_router
+from app.routes.voice_process_route import router as voice_process_router
+from app.workers.voice_worker import VoiceWorker
 
 logging.basicConfig(
     level=logging.INFO if not settings.debug else logging.DEBUG,
@@ -19,9 +22,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("sub1s-ai")
 
+background_worker: Optional[VoiceWorker] = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global background_worker
     logger.info("Initializing Sub1S AI Service...")
     # Whisper 모델 및 지하철 역명 사전 워밍업
     try:
@@ -35,7 +41,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Whisper warmup deferred: {e}")
 
+    # Valkey BullMQ 백그라운드 워커 기동 (설정 시)
+    if settings.enable_bullmq_worker:
+        try:
+            background_worker = VoiceWorker()
+            await background_worker.start()
+        except Exception as e:
+            logger.warning(f"BullMQ background worker auto-start failed: {e}")
+
     yield
+
+    if background_worker:
+        await background_worker.stop()
     logger.info("Shutting down Sub1S AI Service...")
 
 
@@ -64,6 +81,7 @@ app.include_router(stt_router)
 app.include_router(nlu_router)
 app.include_router(briefing_router)
 app.include_router(preference_router)
+app.include_router(voice_process_router)
 
 
 if __name__ == "__main__":
