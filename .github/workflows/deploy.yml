@@ -58,12 +58,12 @@ jobs:
             sudo docker compose pull ai
             sudo docker compose up -d ai
 
-            for i in $(seq 1 15); do
-              if curl -sf http://127.0.0.1:8000/health; then
+            for i in $(seq 1 20); do
+              if sudo docker compose exec -T ai curl -sf http://localhost:8000/health > /dev/null 2>&1; then
                 echo "✅ Sub1S AI 워커 헬스체크 성공"
                 exit 0
               fi
-              echo "AI 서비스 기동 대기 중... ($i/15)"
+              echo "AI 서비스 기동 대기 중... ($i/20)"
               sleep 4
             done
             echo "❌ 헬스체크 타임아웃"
