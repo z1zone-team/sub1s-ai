@@ -1,4 +1,5 @@
 from fastapi import APIRouter, File, UploadFile, Query
+from fastapi.concurrency import run_in_threadpool
 from app.dtos.response_dto import SttResponseDto
 from app.errors.exceptions import InvalidAudioFormatException
 from app.pipelines.stt_pipeline import stt_pipeline
@@ -25,7 +26,9 @@ async def transcribe_audio(
     if not content:
         raise InvalidAudioFormatException("업로드된 오디오 파일이 비어 있습니다.")
 
-    return stt_pipeline.transcribe(
+    # 전사는 동기이고 CPU를 오래 써서 이벤트 루프를 막지 않도록 스레드풀에서 돌린다
+    return await run_in_threadpool(
+        stt_pipeline.transcribe,
         audio_bytes=content,
         filename=filename,
         language=language,

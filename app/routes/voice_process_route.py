@@ -4,6 +4,7 @@ import os
 import time
 from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 
 from app.dtos.request_dto import RouteMode
 from app.dtos.response_dto import VoiceProcessResponseDto
@@ -69,7 +70,8 @@ async def process_voice(
             raise InvalidAudioFormatException("오디오 파일 크기는 최대 5MB를 초과할 수 없습니다.")
 
         # STT 음성 전사
-        stt_result = stt.transcribe(audio_bytes=content, filename=file.filename)
+        # 전사는 동기이고 CPU를 오래 써서 이벤트 루프를 막지 않도록 스레드풀에서 돌린다
+        stt_result = await run_in_threadpool(stt.transcribe, audio_bytes=content, filename=file.filename)
         final_transcript = stt_result.transcript.strip()
 
     # 2. transcript_hint가 제공된 경우 보정 또는 힌트 우선 적용
