@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     valkey_password: Optional[str] = None
     voice_queue_name: str = "subway-voice"
     enable_bullmq_worker: bool = False
+    # 동시에 처리할 큐 작업 수. Whisper는 CPU를 오래 써서 1 vCPU 환경에서는 1이 안전하다
+    voice_worker_concurrency: int = 1
 
     # Station Data Path
     subway_stations_file: str = os.path.join(

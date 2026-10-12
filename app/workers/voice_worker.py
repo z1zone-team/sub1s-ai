@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import io
 import logging
@@ -30,6 +31,7 @@ class VoiceWorker:
         valkey_host: Optional[str] = None,
         valkey_port: Optional[int] = None,
         valkey_password: Optional[str] = None,
+        concurrency: Optional[int] = None,
         stt: Optional[SttPipeline] = None,
         nlu: Optional[NluPipeline] = None,
         tts: Optional[TtsPipeline] = None,
@@ -39,6 +41,7 @@ class VoiceWorker:
         self.valkey_host = valkey_host or settings.valkey_host
         self.valkey_port = valkey_port or settings.valkey_port
         self.valkey_password = valkey_password or settings.valkey_password
+        self.concurrency = max(1, concurrency or settings.voice_worker_concurrency)
 
         self.stt = stt or stt_pipeline
         self.nlu = nlu or NluPipeline.get_instance()
@@ -88,7 +91,9 @@ class VoiceWorker:
             if not audio_b64:
                 return {"error": "Missing audio_base64 in payload"}
             audio_bytes = base64.b64decode(audio_b64)
-            stt_res = self.stt.transcribe(audio_bytes=audio_bytes)
+            # Whisper는 동기이고 CPU를 오래 쓴다. 이벤트 루프에서 직접 부르면 전사하는 동안 같은 프로세스의
+            # 헬스체크와 다른 요청이 멈추므로 스레드로 넘긴다
+            stt_res = await asyncio.to_thread(self.stt.transcribe, audio_bytes=audio_bytes)
             return {
                 "transcript": stt_res.transcript,
                 "durationSec": stt_res.duration_sec,
@@ -140,7 +145,7 @@ class VoiceWorker:
             self._worker = Worker(
                 name=self.queue_name,
                 processor=self.process_job,
-                opts={"connection": connection_opts, "concurrency": 2},
+                opts={"connection": connection_opts, "concurrency": self.concurrency},
             )
             self._is_running = True
             logger.info(
