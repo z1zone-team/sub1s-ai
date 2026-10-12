@@ -7,7 +7,7 @@ FastAPI 기반의 고속 STT(음성 인식), Gemini NLU(의도 분석 및 슬롯
 ## 🚀 기술 스택
 - **Python**: 3.10+
 - **FastAPI**: 0.110+ (비동기 엔드포인트 & Pydantic V2)
-- **STT**: `faster-whisper` (int8 양자화, 1 vCPU 환경 최적화)
+- **STT**: `faster-whisper` (int8 양자화, 기본 모델 `small`, 1 vCPU 환경 최적화)
 - **NLU / 브리핑**: Google Gemini API (Single-Call 구조 & 0-토큰 가드레일)
 - **TTS**: `edge-tts` (Microsoft 신경망 음성 `ko-KR-SunHiNeural`)
 - **Queue**: Valkey / BullMQ 비동기 큐
@@ -27,6 +27,20 @@ FastAPI 기반의 고속 STT(음성 인식), Gemini NLU(의도 분석 및 슬롯
 
 - **오류**: 입력이 비어 있거나 5MB를 넘는 등 잘못된 오디오는 예외가 되어 작업이 **실패(failed)** 합니다. `audioBase64`가 아예 없으면 작업은 **완료**되고 결과가 `{ "error": "Missing audio_base64 in payload" }`입니다. 호출하는 쪽은 두 경우를 모두 처리해야 합니다.
 - **STT는 스레드에서 실행**됩니다(Whisper가 동기이고 CPU를 오래 써서 이벤트 루프를 막지 않도록).
+
+## 🎙️ STT 설정 (Whisper)
+
+| 환경 변수 | 기본값 | 설명 |
+| :--- | :-: | :--- |
+| `WHISPER_MODEL_SIZE` | `small` | `tiny`, `base`, `small`, `medium`. 이미지는 빌드할 때 이 모델을 내려받아 포함합니다(`docker build --build-arg WHISPER_MODEL_SIZE=base .`) |
+| `WHISPER_CPU_THREADS` | `1` | 컨테이너 CPU 한도보다 스레드가 많으면 스로틀링으로 오히려 느려집니다 |
+| `WHISPER_MAX_NEW_TOKENS` | `128` | 한 구간에서 만들 최대 토큰. 같은 말을 반복하는 환각 루프가 워커를 붙잡지 않게 합니다 |
+| `WHISPER_NO_REPEAT_NGRAM_SIZE` | `3` | 같은 3-gram의 반복을 막습니다 |
+
+- **모델은 실기기(SM-G981N)로 녹음한 14개를 CPU 1개, int8, 한국어로 비교해 정했습니다.** 1건(5초 안팎) 처리 시간: `tiny` 1.0초, `base` 1.8초, `small` 5.2초, `medium` 14.1초, `large-v3` 35초. 운영 컨테이너는 0.6코어라 `cpu_threads=1`에서 `small`이 약 5초, `medium` 이상은 서버의 STT 대기 제한(25초)을 넘고 메모리도 2GB를 넘어 쓸 수 없습니다. `tiny`는 `강남력`, `병지대`처럼 자주 틀립니다
+- **메모리**: 서비스 컨테이너 전체(FastAPI, 워커 포함)가 대기 중 약 380MB, 요청을 처리할 때 최대 약 680MB입니다(CPU 0.6코어 제한, 요청 6건 순차 측정). 운영 컨테이너 상한 1GB로 충분합니다. 동시에 여러 요청을 처리하면 늘어납니다
+- **말소리가 없으면 빈 전사(`""`)를 돌려줍니다.** 가짜 문장으로 채우지 않습니다. 모델을 불러오지 못하면 오류입니다(예전에는 가짜 문장을 돌려줬음)
+- 모델 크기와 상관없이 역 이름 오인식(`명지대` -> `명시대`)은 남을 수 있습니다. 역 사전으로 바로잡는 것은 서버의 음성 의도 분석에서 합니다
 - 큐는 오디오를 base64로 담으므로 Valkey 메모리를 씁니다(운영 Valkey 80MB, `noeviction`). 보내는 쪽에서 크기를 제한하고 끝난 작업은 짧게 보관해야 합니다.
 
 ## 📂 프로젝트 구조

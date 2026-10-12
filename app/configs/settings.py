@@ -13,9 +13,15 @@ class Settings(BaseSettings):
     ai_port: int = 8000
 
     # Whisper STT Config
-    whisper_model_size: str = "tiny"  # tiny, base, small
+    whisper_model_size: str = "small"  # tiny, base, small, medium (실기기 녹음으로 비교해 small로 정함)
     whisper_device: str = "cpu"       # cpu, cuda
     whisper_compute_type: str = "int8"  # int8, float16, float32
+    # CPU 한도(운영 컨테이너 0.6코어)보다 스레드가 많으면 스로틀링으로 오히려 느려진다 (small 기준 9.0초 -> 5.0초)
+    whisper_cpu_threads: int = 1
+    # 한 구간에서 만들 수 있는 최대 토큰 수. 같은 말을 반복하는 환각 루프가 워커를 오래 붙잡지 않게 한다
+    whisper_max_new_tokens: int = 128
+    # 같은 3-gram의 반복을 막는다
+    whisper_no_repeat_ngram_size: int = 3
 
     # Gemini Config
     gemini_api_key: str = ""

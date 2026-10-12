@@ -1,4 +1,5 @@
 import io
+import re
 import time
 import logging
 from typing import Optional, Tuple
@@ -7,6 +8,18 @@ from app.dtos.response_dto import SttResponseDto
 from app.errors.exceptions import InvalidAudioFormatException, SttProcessingException
 
 logger = logging.getLogger(__name__)
+
+_REPEATED_PUNCTUATION = re.compile(r"([,.?!、。])\1+")
+_ONLY_PUNCTUATION = re.compile(r"^[\s,.?!、。…~·\-]*$")
+
+
+def clean_transcript(text: str) -> str:
+    """
+    전사 결과에서 같은 문장부호가 연달아 반복된 것(`,,,,`)을 하나로 줄이고,
+    문장부호와 공백만 남았으면 빈 문자열로 본다 (말소리가 없었다는 뜻)
+    """
+    collapsed = _REPEATED_PUNCTUATION.sub(r"\1", text).strip()
+    return "" if _ONLY_PUNCTUATION.match(collapsed) else collapsed
 
 
 class SttPipeline:
@@ -43,6 +56,7 @@ class SttPipeline:
                 settings.whisper_model_size,
                 device=settings.whisper_device,
                 compute_type=settings.whisper_compute_type,
+                cpu_threads=settings.whisper_cpu_threads,
             )
             logger.info(f"faster-whisper model loaded in {time.time() - started:.2f}s")
             return self._model
@@ -73,16 +87,9 @@ class SttPipeline:
         started_at = time.time()
 
         if model is None:
-            # 모델 미로딩 시 폴백 전사
-            logger.warning("Whisper model not initialized. Using simulated fallback transcript.")
-            processing_time = time.time() - started_at
-            return SttResponseDto(
-                transcript="강남역에서 을지로입구역까지 최적 경로로 안내해줘",
-                language=language,
-                duration_sec=2.5,
-                processing_time_sec=round(processing_time, 3),
-                confidence=0.9,
-            )
+            # 모델이 없을 때 가짜 문장을 돌려주면 말을 하지 않아도 경로가 나와서 오류를 숨긴다. 오류로 알린다
+            logger.error("Whisper model is not available. Refusing to return a made-up transcript.")
+            raise SttProcessingException("음성 인식 모델을 사용할 수 없습니다.")
 
         try:
             audio_stream = io.BytesIO(audio_bytes)
@@ -91,15 +98,19 @@ class SttPipeline:
                 language=language,
                 beam_size=1,  # 고속 처리를 위한 Greedy search
                 vad_filter=True,  # 무음 구간 제거
+                # 환각 루프 방지: 온도를 올려 다시 해독하는 재시도를 끄고(재시도가 구간마다 반복돼 수십 초가 걸렸다),
+                # 만들 수 있는 토큰 수와 반복을 제한한다
+                temperature=0.0,
+                max_new_tokens=settings.whisper_max_new_tokens,
+                no_repeat_ngram_size=settings.whisper_no_repeat_ngram_size,
             )
 
             collected_texts = []
             for segment in segments:
                 collected_texts.append(segment.text.strip())
 
-            transcript = " ".join(collected_texts).strip()
-            if not transcript:
-                transcript = "강남역에서 을지로입구역까지"
+            # 말소리가 없으면 빈 전사다. 가짜 문장으로 채우지 않는다
+            transcript = clean_transcript(" ".join(collected_texts))
 
             processing_time = time.time() - started_at
             return SttResponseDto(
