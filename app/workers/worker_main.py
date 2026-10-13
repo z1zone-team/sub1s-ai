@@ -4,6 +4,7 @@ import signal
 import sys
 
 from app.configs.settings import settings
+from app.pipelines.stt_pipeline import stt_pipeline
 from app.workers.voice_worker import VoiceWorker
 
 logging.basicConfig(
@@ -13,11 +14,30 @@ logging.basicConfig(
 logger = logging.getLogger("worker_main")
 
 
+async def preload_model() -> bool:
+    """
+    워커를 시작하기 전에 Whisper 모델을 로드한다. 단독 실행(`worker_main`)에서는 FastAPI의 시작 단계가 없어
+    모델이 첫 작업 때 로드되고, 그 작업만 로드 시간(수십 초)만큼 늦어 서버의 STT 대기 제한(25초)에 걸릴 수 있다.
+    로드에 실패해도 워커는 뜬다(작업은 `음성 인식 모델을 사용할 수 없습니다`로 실패하고 다음 작업에서 다시 시도한다)
+    """
+    if not settings.whisper_preload:
+        return False
+    try:
+        # 모델 로드는 동기이고 오래 걸려서 이벤트 루프를 막지 않도록 스레드에서 한다
+        await asyncio.to_thread(stt_pipeline.load_model)
+        return True
+    except Exception as e:
+        logger.warning(f"Whisper 모델을 미리 로드하지 못했습니다. 첫 작업에서 다시 시도합니다: {e}")
+        return False
+
+
 async def run_worker():
     logger.info("Sub1S AI BullMQ Voice Worker 프로세스를 시작합니다...")
     logger.info(
         f"대상 Valkey: {settings.valkey_host}:{settings.valkey_port}, 큐: '{settings.voice_queue_name}'"
     )
+
+    await preload_model()
 
     worker = VoiceWorker()
     stop_event = asyncio.Event()

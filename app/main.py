@@ -36,10 +36,11 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"StationValidator warmup failed: {e}")
 
-    try:
-        stt_pipeline.load_model()
-    except Exception as e:
-        logger.warning(f"Whisper warmup deferred: {e}")
+    if settings.whisper_preload:
+        try:
+            stt_pipeline.load_model()
+        except Exception as e:
+            logger.warning(f"Whisper warmup deferred: {e}")
 
     # Valkey BullMQ 백그라운드 워커 기동 (설정 시)
     if settings.enable_bullmq_worker:

@@ -1,5 +1,6 @@
 import io
 import re
+import threading
 import time
 import logging
 from typing import Optional, Tuple
@@ -29,6 +30,8 @@ class SttPipeline:
     """
     _instance: Optional["SttPipeline"] = None
     _model = None
+    # 미리 로드하는 스레드와 첫 요청이 동시에 `load_model`을 불러도 모델을 한 번만 로드한다(수백 MB, 수십 초)
+    _load_lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
@@ -40,10 +43,16 @@ class SttPipeline:
         pass
 
     def load_model(self):
-        """Whisper 모델을 인메모리에 로드합니다."""
+        """Whisper 모델을 인메모리에 로드합니다. 동시에 불려도 한 번만 로드하고 나머지는 그 로드를 기다립니다."""
         if self._model is not None:
             return self._model
 
+        with self._load_lock:
+            if self._model is not None:
+                return self._model
+            return self._load_model_locked()
+
+    def _load_model_locked(self):
         try:
             from faster_whisper import WhisperModel
 
