@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.configs.settings import Settings
+from app.configs.settings import Settings, settings
 from app.errors.exceptions import InvalidAudioFormatException, SttProcessingException
 from app.pipelines.stt_pipeline import SttPipeline, clean_transcript
 
@@ -93,6 +93,10 @@ def test_model_is_loaded_with_the_configured_size_and_one_cpu_thread(monkeypatch
 
     monkeypatch.setitem(sys.modules, "faster_whisper", SimpleNamespace(WhisperModel=RecordingModel))
     monkeypatch.setattr(SttPipeline, "_model", None)
+    # 로컬 `.env`가 모델 크기를 바꿔 두어도(개발 PC에서 tiny를 쓰는 경우) 이 테스트는 코드의 기본 설정을 본다
+    monkeypatch.setattr(settings, "whisper_model_size", "small")
+    monkeypatch.setattr(settings, "whisper_cpu_threads", 1)
+    monkeypatch.setattr(settings, "whisper_compute_type", "int8")
 
     SttPipeline().load_model()
 
@@ -103,7 +107,8 @@ def test_model_is_loaded_with_the_configured_size_and_one_cpu_thread(monkeypatch
 
 
 def test_settings_defaults():
-    settings = Settings()
+    # `_env_file=None`: 개발 PC의 `.env`가 기본값을 덮어써도 코드의 기본값을 검사한다
+    settings = Settings(_env_file=None)
 
     assert settings.whisper_model_size == "small"
     assert settings.whisper_cpu_threads == 1
@@ -126,3 +131,36 @@ class TestCleanTranscript:
 
     def test_strips_surrounding_spaces(self):
         assert clean_transcript("  강남역  ") == "강남역"
+
+
+def test_concurrent_load_model_calls_load_the_model_once(monkeypatch):
+    """미리 로드하는 스레드와 첫 요청이 동시에 불러도 수백 MB 모델을 한 번만 로드한다"""
+    import sys
+    import threading
+    import time
+    from types import SimpleNamespace
+
+    created = []
+
+    class SlowModel:
+        def __init__(self, *args, **kwargs):
+            created.append(1)
+            time.sleep(0.2)  # 로드가 끝나기 전에 다른 호출이 들어오게 한다
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", SimpleNamespace(WhisperModel=SlowModel))
+    monkeypatch.setattr(SttPipeline, "_model", None)
+
+    pipeline = SttPipeline()
+    results = []
+
+    def call():
+        results.append(pipeline.load_model())
+
+    threads = [threading.Thread(target=call) for _ in range(5)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert len(created) == 1
+    assert len(results) == 5 and all(model is results[0] for model in results)
