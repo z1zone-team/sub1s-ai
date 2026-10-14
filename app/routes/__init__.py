@@ -1,15 +1,15 @@
-from app.routes.briefing_route import router as briefing_router
-from app.routes.health_route import router as health_router
-from app.routes.nlu_route import router as nlu_router
-from app.routes.preference_route import router as preference_router
-from app.routes.stt_route import router as stt_router
-from app.routes.voice_process_route import router as voice_process_router
+"""Load exported components only when requested, keeping pure APIs independent of voice dependencies."""
+from importlib import import_module
 
-__all__ = [
-    "health_router",
-    "stt_router",
-    "nlu_router",
-    "briefing_router",
-    "preference_router",
-    "voice_process_router",
-]
+_EXPORTS = {'briefing_router': ('briefing_route', 'router'), 'health_router': ('health_route', 'router'), 'nlu_router': ('nlu_route', 'router'), 'preference_router': ('preference_route', 'router'), 'stt_router': ('stt_route', 'router'), 'voice_process_router': ('voice_process_route', 'router')}
+
+__all__ = list(_EXPORTS)
+
+
+def __getattr__(name):
+    if name not in _EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attribute = _EXPORTS[name]
+    value = getattr(import_module(f"{__name__}.{module_name}"), attribute)
+    globals()[name] = value
+    return value
