@@ -36,3 +36,11 @@ def test_versioned_http_contract_keeps_legacy_endpoint():
         legacy = client.post('/api/v1/ai/preference-vector', json={'trips': []})
         assert legacy.status_code == 200
         assert len(legacy.json()['vector']) == 6
+
+
+def test_route_dto_accepts_new_server_criteria():
+    from app.dtos.request_dto import RouteMode, SubwayRouteDto
+    for mode in ['FASTEST', 'LEAST_WALK', 'FEWEST_TRANSFERS']:
+        assert RouteMode(mode).value == mode
+        route = SubwayRouteDto(mode=mode, totalDurationSec=600, totalDistanceKm=2, totalFare=1500, transferCount=0, segments=[])
+        assert route.mode.value == mode

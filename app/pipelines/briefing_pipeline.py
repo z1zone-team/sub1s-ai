@@ -13,6 +13,9 @@ MODE_LABELS = {
     RouteMode.COMFORTABLE: "여유 좌석",
     RouteMode.PERSONAL: "개인 맞춤",
     RouteMode.CHEAPEST: "최소 비용",
+    RouteMode.FASTEST: "최소 시간",
+    RouteMode.LEAST_WALK: "최소 도보",
+    RouteMode.FEWEST_TRANSFERS: "최소 환승",
 }
 
 
