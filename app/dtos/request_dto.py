@@ -8,6 +8,9 @@ class RouteMode(str, Enum):
     COMFORTABLE = "COMFORTABLE"
     PERSONAL = "PERSONAL"
     CHEAPEST = "CHEAPEST"
+    FASTEST = "FASTEST"
+    LEAST_WALK = "LEAST_WALK"
+    FEWEST_TRANSFERS = "FEWEST_TRANSFERS"
 
 
 class NluRequestDto(BaseModel):
