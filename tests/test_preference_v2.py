@@ -44,3 +44,9 @@ def test_route_dto_accepts_new_server_criteria():
         assert RouteMode(mode).value == mode
         route = SubwayRouteDto(mode=mode, totalDurationSec=600, totalDistanceKm=2, totalFare=1500, transferCount=0, segments=[])
         assert route.mode.value == mode
+
+def test_duplicate_alternatives_do_not_change_the_model():
+    # 서버는 같은 경로가 여러 모드로 나오면 같은 값을 alternatives에 여러 번 넣는다. 축마다 최솟값과 최댓값만 쓰므로 결과가 같아야 한다
+    once = {'selected': {'fare': 1000, 'time': 500}, 'alternatives': [{'fare': 2000, 'time': 300}, {'fare': 1000, 'time': 500}]}
+    twice = {'selected': {'fare': 1000, 'time': 500}, 'alternatives': [{'fare': 2000, 'time': 300}, {'fare': 2000, 'time': 300}, {'fare': 1000, 'time': 500}, {'fare': 1000, 'time': 500}]}
+    assert compute_preference_v2(PreferenceRequestV2(choices=[once])) == compute_preference_v2(PreferenceRequestV2(choices=[twice]))
