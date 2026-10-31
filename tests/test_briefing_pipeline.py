@@ -51,8 +51,6 @@ async def test_briefing_pipeline_template_generation(sample_route):
     assert "강남역에서 을지로입구역까지 최적 경로로 안내해 드릴게요." in res.briefing_text
     assert "총 약 25분 소요되며 환승은 1회 필요해요." in res.briefing_text
     assert "4번 칸에 탑승하시면 빠른 환승이 가능해요." in res.briefing_text
-    assert res.audio_tts_url is not None
-    assert "/api/v1/ai/tts/stream?text=" in res.audio_tts_url
     assert res.is_llm_generated is False
 
 

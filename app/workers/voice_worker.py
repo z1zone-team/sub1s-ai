@@ -12,7 +12,6 @@ from app.dtos.request_dto import RouteMode
 from app.pipelines.briefing_pipeline import BriefingPipeline
 from app.pipelines.nlu_pipeline import NluPipeline
 from app.pipelines.stt_pipeline import SttPipeline, stt_pipeline
-from app.pipelines.tts_pipeline import TtsPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ class VoiceWorker:
     """
     Valkey(Redis) BullMQ 큐 비동기 음성 처리 워커.
     - 큐 이름: settings.voice_queue_name (기본: subway-voice)
-    - 지원 작업: 음성 전사(STT), 의도 분석(NLU), 음성 합성(Edge-TTS)
+    - 지원 작업: 음성 전사(STT), 의도 분석(NLU)
     - Fault-Tolerant 장애 격리: Valkey 미실행 환경에서도 크래시 없이 대기
     """
 
@@ -34,7 +33,6 @@ class VoiceWorker:
         concurrency: Optional[int] = None,
         stt: Optional[SttPipeline] = None,
         nlu: Optional[NluPipeline] = None,
-        tts: Optional[TtsPipeline] = None,
         briefing: Optional[BriefingPipeline] = None,
     ):
         self.queue_name = queue_name or settings.voice_queue_name
@@ -45,7 +43,6 @@ class VoiceWorker:
 
         self.stt = stt or stt_pipeline
         self.nlu = nlu or NluPipeline.get_instance()
-        self.tts = tts or TtsPipeline.get_instance()
         self.briefing = briefing or BriefingPipeline.get_instance()
 
         self._worker: Optional[Worker] = None
@@ -97,15 +94,6 @@ class VoiceWorker:
             return {
                 "transcript": stt_res.transcript,
                 "durationSec": stt_res.duration_sec,
-            }
-
-        elif action in ("tts", "synthesize_tts"):
-            text = data.get("text", "")
-            voice = data.get("voice")
-            mp3_bytes = await self.tts.synthesize_mp3_bytes(text=text, voice=voice)
-            return {
-                "audioBase64": base64.b64encode(mp3_bytes).decode("utf-8"),
-                "bytesLength": len(mp3_bytes),
             }
 
         elif action in ("briefing", "voice_summary"):

@@ -73,29 +73,3 @@ class BriefingRequestDto(BaseModel):
         default=RouteMode.OPTIMAL, alias="preferredMode", description="추천 모드"
     )
     route: Optional[SubwayRouteDto] = Field(None, description="다익스트라 추천 경로 세부 데이터")
-
-
-class TtsRequestDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    text: str = Field(..., min_length=1, max_length=1000, description="음성으로 합성할 텍스트")
-    voice: Optional[str] = Field(None, description="Edge-TTS 음성 모델 (기본: ko-KR-SunHiNeural)")
-
-
-class VoiceSummaryRequestDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    origin_station_name: str = Field(
-        ..., alias="originStationName", description="출발역 이름"
-    )
-    dest_station_name: str = Field(
-        ..., alias="destStationName", description="도착역 이름"
-    )
-    preferred_mode: RouteMode = Field(
-        default=RouteMode.OPTIMAL, alias="preferredMode", description="추천 모드"
-    )
-    route: Optional[SubwayRouteDto] = Field(None, description="다익스트라 추천 경로 세부 데이터")
-    voice: Optional[str] = Field(None, description="Edge-TTS 음성 모델")
-    include_base64: bool = Field(
-        False, alias="includeBase64", description="응답에 MP3 Base64 바이너리 포함 여부"
-    )

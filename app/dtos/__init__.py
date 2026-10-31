@@ -10,8 +10,6 @@ from app.dtos.request_dto import (
     PathSegmentDto,
     RouteMode,
     SubwayRouteDto,
-    TtsRequestDto,
-    VoiceSummaryRequestDto,
 )
 from app.dtos.response_dto import (
     BriefingResponseDto,
@@ -19,7 +17,6 @@ from app.dtos.response_dto import (
     NluResponseDto,
     SttResponseDto,
     VoiceProcessResponseDto,
-    VoiceSummaryResponseDto,
 )
 
 __all__ = [
@@ -31,10 +28,7 @@ __all__ = [
     "PathSegmentDto",
     "SubwayRouteDto",
     "BriefingRequestDto",
-    "TtsRequestDto",
-    "VoiceSummaryRequestDto",
     "BriefingResponseDto",
-    "VoiceSummaryResponseDto",
     "VoiceProcessResponseDto",
     "TripRecordDto",
     "PreferenceVectorRequestDto",
