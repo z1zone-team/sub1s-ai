@@ -59,40 +59,10 @@ class BriefingResponseDto(BaseModel):
         alias="briefingText",
         description="자연어 경로 요약 브리핑 멘트",
     )
-    audio_tts_url: Optional[str] = Field(
-        None,
-        alias="audioTtsUrl",
-        description="Edge-TTS 오디오 스트리밍 엔드포인트 URL",
-    )
     is_llm_generated: bool = Field(
         default=False,
         alias="isLlmGenerated",
         description="Gemini LLM 생성 여부 (실패 시 False/규칙 기반 템플릿 생성)",
-    )
-
-
-class VoiceSummaryResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    briefing_text: str = Field(
-        ...,
-        alias="briefingText",
-        description="자연어 경로 요약 브리핑 멘트",
-    )
-    audio_duration_sec: Optional[float] = Field(
-        None,
-        alias="audioDurationSec",
-        description="합성된 음성 길이(초)",
-    )
-    audio_base64: Optional[str] = Field(
-        None,
-        alias="audioBase64",
-        description="합성된 MP3 바이너리의 Base64 인코딩 문자열",
-    )
-    audio_tts_url: Optional[str] = Field(
-        None,
-        alias="audioTtsUrl",
-        description="Edge-TTS 오디오 스트리밍 엔드포인트 URL",
     )
 
 
