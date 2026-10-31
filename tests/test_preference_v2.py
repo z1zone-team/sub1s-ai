@@ -25,7 +25,7 @@ def test_unknown_axes_and_nonfinite_features_are_rejected():
         with pytest.raises(ValidationError):
             PreferenceRequestV2(choices=[{'selected': selected, 'alternatives': []}])
 
-def test_versioned_http_contract_keeps_legacy_endpoint():
+def test_versioned_http_contract():
     app = FastAPI()
     app.include_router(router)
     with TestClient(app) as client:
@@ -33,9 +33,6 @@ def test_versioned_http_contract_keeps_legacy_endpoint():
         assert result.status_code == 200
         assert result.json()['modelVersion'] == 'route-preference-v2'
         assert len(result.json()['vector']) == 10
-        legacy = client.post('/api/v1/ai/preference-vector', json={'trips': []})
-        assert legacy.status_code == 200
-        assert len(legacy.json()['vector']) == 6
 
 
 def test_route_dto_accepts_new_server_criteria():

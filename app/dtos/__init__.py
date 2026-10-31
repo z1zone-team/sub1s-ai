@@ -1,9 +1,3 @@
-from app.dtos.preference_dto import (
-    PreferenceVectorRequestDto,
-    PreferenceVectorResponseDto,
-    RoutePreferenceWeightsDto,
-    TripRecordDto,
-)
 from app.dtos.request_dto import (
     BriefingRequestDto,
     NluRequestDto,
@@ -30,8 +24,4 @@ __all__ = [
     "BriefingRequestDto",
     "BriefingResponseDto",
     "VoiceProcessResponseDto",
-    "TripRecordDto",
-    "PreferenceVectorRequestDto",
-    "RoutePreferenceWeightsDto",
-    "PreferenceVectorResponseDto",
 ]
