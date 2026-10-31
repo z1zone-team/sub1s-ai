@@ -1,6 +1,5 @@
 import logging
 from typing import Optional
-from urllib.parse import quote
 
 from app.clients.gemini_client import GeminiClient
 from app.dtos.request_dto import RouteMode, SubwayRouteDto
@@ -79,11 +78,8 @@ class BriefingPipeline:
             is_llm = False
             logger.info("[BriefingPipeline] 규칙 템플릿 기반 브리핑 생성 완료")
 
-        audio_tts_url = f"/api/v1/ai/tts/stream?text={quote(final_text)}"
-
         return BriefingResponseDto(
             briefing_text=final_text,
-            audio_tts_url=audio_tts_url,
             is_llm_generated=is_llm,
         )
 

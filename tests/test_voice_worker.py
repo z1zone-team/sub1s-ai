@@ -46,22 +46,6 @@ async def test_worker_process_voice_job(worker):
 
 
 @pytest.mark.asyncio
-async def test_worker_process_tts_job(worker):
-    # BullMQ 잡 프로세서 tts 액션 검증
-    mock_job = MagicMock(spec=Job)
-    mock_job.id = "job-2"
-    mock_job.name = "tts"
-    mock_job.data = {
-        "action": "tts",
-        "text": "안내를 시작합니다.",
-    }
-
-    result = await worker.process_job(mock_job)
-    assert "audioBase64" in result
-    assert result["bytesLength"] > 1000
-
-
-@pytest.mark.asyncio
 async def test_worker_process_unsupported_job(worker):
     # 미지원 액션 안전 처리 검증
     mock_job = MagicMock(spec=Job)

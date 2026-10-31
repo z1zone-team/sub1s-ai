@@ -1,6 +1,6 @@
 # Sub1S AI Worker Service (`sub1s-ai`)
 
-FastAPI 기반의 고속 STT(음성 인식), Gemini NLU(의도 분석 및 슬롯 필링), 그리고 Edge-TTS(자연어 음성 합성) 파이프라인 워커 서비스입니다.
+FastAPI 기반의 고속 STT(음성 인식), Gemini NLU(의도 분석 및 슬롯 필링) 파이프라인 워커 서비스입니다.
 
 ---
 
@@ -9,7 +9,6 @@ FastAPI 기반의 고속 STT(음성 인식), Gemini NLU(의도 분석 및 슬롯
 - **FastAPI**: 0.110+ (비동기 엔드포인트 & Pydantic V2)
 - **STT**: `faster-whisper` (int8 양자화, 기본 모델 `small`, 1 vCPU 환경 최적화)
 - **NLU / 브리핑**: Google Gemini API (Single-Call 구조 & 0-토큰 가드레일)
-- **TTS**: `edge-tts` (Microsoft 신경망 음성 `ko-KR-SunHiNeural`)
 - **Queue**: Valkey / BullMQ 비동기 큐
 
 ---
@@ -22,7 +21,6 @@ FastAPI 기반의 고속 STT(음성 인식), Gemini NLU(의도 분석 및 슬롯
 | :--- | :--- | :--- |
 | `stt` (`transcribe`) | `{ action: "stt", audioBase64: string }` (`audio_base64`도 받음) | `{ transcript: string, durationSec: number }` |
 | `nlu` (`intent`, `voice_process`) | `{ action: "nlu", transcript: string, preferredMode?: RouteMode }` | 의도 분석 결과(`originStationName`, `destStationName`, `preferredMode` 등) |
-| `tts` (`synthesize_tts`) | `{ action: "tts", text: string, voice?: string }` | `{ audioBase64: string, bytesLength: number }` |
 | `briefing` (`voice_summary`) | `{ action: "briefing", originStationName, destStationName }` | 브리핑 결과 |
 
 - **오류**: 입력이 비어 있거나 5MB를 넘는 등 잘못된 오디오는 예외가 되어 작업이 **실패(failed)** 합니다. `audioBase64`가 아예 없으면 작업은 **완료**되고 결과가 `{ "error": "Missing audio_base64 in payload" }`입니다. 호출하는 쪽은 두 경우를 모두 처리해야 합니다.
@@ -50,7 +48,7 @@ app/
 ├── dtos/             # 요청/응답 Pydantic 스키마
 ├── errors/           # 커스텀 예외 및 글로벌 에러 핸들러
 ├── guardrails/       # [devine_ai 패턴] 0-토큰 역명/모드 가드레일
-├── pipelines/        # STT, NLU, TTS 핵심 파이프라인
+├── pipelines/        # STT, NLU 핵심 파이프라인
 ├── routes/           # FastAPI 라우트 핸들러
 └── main.py           # 애플리케이션 진입점
 tests/                # pytest 테스트 스위트

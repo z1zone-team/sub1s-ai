@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Sub1S AI Worker API",
-    description="Sub1S faster-whisper STT, Gemini NLU, and Edge-TTS Pipeline",
+    description="Sub1S faster-whisper STT, and Gemini NLU Pipeline",
     version="0.1.0",
     lifespan=lifespan,
 )
