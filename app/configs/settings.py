@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     nlu_timeout_sec: float = 2.0  # 2초 SLA 타임아웃
 
 
+    # 취향 문장 임베딩 (multilingual-e5-small ONNX 양자화본과 SentencePiece). 이미지 빌드 때 이 폴더에 받는다
+    preference_embedding_model_dir: str = "/app/models/e5-small"
+
     # Valkey / Redis / BullMQ Config
     valkey_host: str = "localhost"
     valkey_port: int = 6379
