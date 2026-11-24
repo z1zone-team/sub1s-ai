@@ -20,7 +20,7 @@ jobs:
           import subprocess
           import sys
           result = subprocess.run(
-              [sys.executable, '-m', 'pytest', '--noconftest', 'tests/test_preference_v2.py'],
+              [sys.executable, '-m', 'pytest', '--noconftest', 'tests/test_preference_v2.py', 'tests/test_preference_embedding.py'],
               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
           )
           print(result.stdout)
