@@ -16,6 +16,18 @@ from app.prompts.nlu_prompt import NLU_SYSTEM_PROMPT, build_nlu_user_prompt
 logger = logging.getLogger(__name__)
 
 
+def first_object(parsed: Any) -> Optional[Dict[str, Any]]:
+    """
+    JSON 응답에서 객체를 꺼낸다. 모델이 가끔 객체 하나를 배열로 감싸 돌려줘서(`[ {...} ]`, 2026-11-26 3.5-flash-lite에서 6번 중 2번)
+    배열이면 첫 객체를 쓴다. 응답 스키마로 객체를 강제하면 응답이 느려져(1.9~5.3초) 쓰지 않는다
+    """
+    if isinstance(parsed, dict):
+        return parsed
+    if isinstance(parsed, list):
+        return next((item for item in parsed if isinstance(item, dict)), None)
+    return None
+
+
 class GeminiClient:
     """
     Google Gemini API 비동기 클라이언트 래퍼.
@@ -71,8 +83,7 @@ class GeminiClient:
         )
         if not response or not response.text:
             return None
-        parsed = json_repair.loads(response.text)
-        return parsed if isinstance(parsed, dict) else None
+        return first_object(json_repair.loads(response.text))
 
     def intent_hint_sync(self, text: str, model: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """받아 적은 문장에서 의도 힌트를 받는다. 오류는 그대로 올린다"""
@@ -88,8 +99,7 @@ class GeminiClient:
         )
         if not response or not response.text:
             return None
-        parsed = json_repair.loads(response.text)
-        return parsed if isinstance(parsed, dict) else None
+        return first_object(json_repair.loads(response.text))
 
     def _sync_generate_nlu(self, prompt: str) -> Optional[Dict[str, Any]]:
         if not self._client:
