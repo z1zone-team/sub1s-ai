@@ -11,6 +11,7 @@ from app.configs.settings import settings
 from app.dtos.request_dto import RouteMode
 from app.pipelines.briefing_pipeline import BriefingPipeline
 from app.pipelines.nlu_pipeline import NluPipeline
+from app.pipelines.speech_pipeline import SpeechPipeline, WhisperSpeechProvider
 from app.pipelines.stt_pipeline import SttPipeline, stt_pipeline
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ class VoiceWorker:
         concurrency: Optional[int] = None,
         stt: Optional[SttPipeline] = None,
         nlu: Optional[NluPipeline] = None,
+        speech: Optional[SpeechPipeline] = None,
         briefing: Optional[BriefingPipeline] = None,
     ):
         self.queue_name = queue_name or settings.voice_queue_name
@@ -42,6 +44,13 @@ class VoiceWorker:
         self.concurrency = max(1, concurrency or settings.voice_worker_concurrency)
 
         self.stt = stt or stt_pipeline
+        # STT를 직접 넣으면(테스트) 그 STT만 쓴다. 아니면 설정의 제공자 순서(기본 gemini, whisper)를 쓴다
+        if speech is not None:
+            self.speech = speech
+        elif stt is not None:
+            self.speech = SpeechPipeline([WhisperSpeechProvider(stt)])
+        else:
+            self.speech = SpeechPipeline.from_settings()
         self.nlu = nlu or NluPipeline.get_instance()
         self.briefing = briefing or BriefingPipeline.get_instance()
 
@@ -88,13 +97,18 @@ class VoiceWorker:
             if not audio_b64:
                 return {"error": "Missing audio_base64 in payload"}
             audio_bytes = base64.b64decode(audio_b64)
-            # Whisper는 동기이고 CPU를 오래 쓴다. 이벤트 루프에서 직접 부르면 전사하는 동안 같은 프로세스의
-            # 헬스체크와 다른 요청이 멈추므로 스레드로 넘긴다
-            stt_res = await asyncio.to_thread(self.stt.transcribe, audio_bytes=audio_bytes)
-            return {
-                "transcript": stt_res.transcript,
-                "durationSec": stt_res.duration_sec,
+            # 제공자 순서대로 시도한다(Gemini가 쿼터, 장애, 시간 초과면 Whisper). Whisper는 스레드에서 돌아 이벤트 루프를 막지 않는다
+            result = await self.speech.transcribe(audio_bytes)
+            payload: Dict[str, Any] = {
+                "transcript": result.transcript,
+                "durationSec": result.duration_sec,
+                "provider": result.provider,
             }
+            if result.fallback_from:
+                payload["fallbackFrom"] = result.fallback_from
+            if result.intent is not None:
+                payload["intent"] = result.intent.to_dict()
+            return payload
 
         elif action in ("briefing", "voice_summary"):
             origin = data.get("originStationName") or data.get("origin_station_name", "강남")

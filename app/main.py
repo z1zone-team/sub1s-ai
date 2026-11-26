@@ -14,6 +14,7 @@ from app.routes.nlu_route import router as nlu_router
 from app.routes.preference_route import router as preference_router
 from app.routes.stt_route import router as stt_router
 from app.routes.voice_process_route import router as voice_process_router
+from app.routes.intent_hint_route import router as intent_hint_router
 from app.workers.voice_worker import VoiceWorker
 
 logging.basicConfig(
@@ -83,6 +84,7 @@ app.include_router(nlu_router)
 app.include_router(briefing_router)
 app.include_router(preference_router)
 app.include_router(voice_process_router)
+app.include_router(intent_hint_router)
 
 
 if __name__ == "__main__":

@@ -99,7 +99,7 @@ async def test_worker_stt_does_not_block_event_loop():
 
     result, _ = await asyncio.gather(worker.process_job(job), heartbeat())
 
-    assert result == {"transcript": "강남역에서 사당역까지", "durationSec": 1.5}
+    assert result == {"transcript": "강남역에서 사당역까지", "durationSec": 1.5, "provider": "whisper"}
     assert len(ticks) >= 10, f"이벤트 루프가 막혔습니다 (heartbeat {len(ticks)}회)"
 
 

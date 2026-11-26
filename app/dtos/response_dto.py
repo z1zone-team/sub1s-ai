@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 from app.dtos.request_dto import RouteMode
 
@@ -19,6 +19,20 @@ class SttResponseDto(BaseModel):
     duration_sec: float = Field(default=0.0, description="오디오 길이(초)")
     processing_time_sec: float = Field(default=0.0, description="STT 처리 소요 시간(초)")
     confidence: Optional[float] = Field(default=None, description="인식 신뢰도")
+    provider: str = Field(default="whisper", description="받아 적은 제공자(gemini, whisper)")
+    fallback_from: List[str] = Field(default_factory=list, description="앞에서 건너뛴 제공자와 이유(예: gemini:quota)")
+    intent: Optional["IntentHintDto"] = Field(default=None, description="Gemini가 준 의도 힌트(Gemini일 때만)")
+
+
+class IntentHintDto(BaseModel):
+    origin: Optional[str] = Field(default=None, description="출발 장소 이름('역' 뺌), 말하지 않았으면 null")
+    destination: Optional[str] = Field(default=None, description="도착 장소 이름('역' 뺌)")
+    mode: Optional[str] = Field(default=None, description="경로 조건(OPTIMAL, FASTEST, FEWEST_TRANSFERS, LEAST_WALK, COMFORTABLE, CHEAPEST, PERSONAL)")
+
+
+class IntentHintResponseDto(BaseModel):
+    available: bool = Field(description="힌트를 받았는지. Gemini가 쉬는 중이거나 키가 없으면 false")
+    hint: Optional[IntentHintDto] = None
 
 
 class NluResponseDto(BaseModel):
@@ -77,3 +91,7 @@ class VoiceProcessResponseDto(BaseModel):
     confidence: float = Field(0.95, description="신뢰도")
     is_fallback: bool = Field(False, alias="isFallback", description="Fallback 안전망 적용 여부")
     processing_time_sec: float = Field(0.0, alias="processingTimeSec", description="총 처리 소요 시간(초)")
+
+
+# IntentHintDto를 SttResponseDto보다 뒤에 정의해 앞으로 참조한 타입을 풀어 둔다
+SttResponseDto.model_rebuild()

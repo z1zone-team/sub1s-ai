@@ -31,6 +31,66 @@ class GeminiClient:
             except Exception as e:
                 logger.error(f"[GeminiClient] Failed to initialize genai.Client: {e}")
 
+    def is_configured(self) -> bool:
+        return bool(self._client and self.api_key)
+
+    @staticmethod
+    def _json_config(model: str) -> "types.GenerateContentConfig":
+        # 받아 적기와 짧은 JSON에는 생각 단계가 필요 없고, 켜면 응답이 수 초 늦어진다.
+        # 2.x는 thinking_budget=0으로 끄고, 3.x는 budget을 받지 않아(400) 가장 낮은 단계(MINIMAL)를 쓴다
+        # (2026-11-26 운영: 2.5-flash 약 2.7초, 3.5-flash-lite MINIMAL 4.8초, 설정 없음 7.1초)
+        if model.startswith("gemini-2"):
+            thinking = types.ThinkingConfig(thinking_budget=0)
+        else:
+            thinking = types.ThinkingConfig(thinking_level="MINIMAL")
+        return types.GenerateContentConfig(
+            temperature=0.0,
+            response_mime_type="application/json",
+            thinking_config=thinking,
+        )
+
+    def transcribe_voice_sync(
+        self, audio: bytes, mime_type: str, language: str = "ko", model: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        오디오를 받아 적고 의도 힌트를 JSON으로 받는다. 오류(429, 503 등)는 그대로 올려
+        호출하는 쪽이 쉬는 시간과 대체 제공자를 정하게 한다
+        """
+        from app.prompts.voice_prompt import VOICE_TRANSCRIBE_PROMPT
+
+        if not self._client:
+            return None
+        model = model or settings.gemini_model
+        response = self._client.models.generate_content(
+            model=model,
+            contents=[
+                types.Part.from_bytes(data=audio, mime_type=mime_type),
+                VOICE_TRANSCRIBE_PROMPT,
+            ],
+            config=self._json_config(model),
+        )
+        if not response or not response.text:
+            return None
+        parsed = json_repair.loads(response.text)
+        return parsed if isinstance(parsed, dict) else None
+
+    def intent_hint_sync(self, text: str, model: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """받아 적은 문장에서 의도 힌트를 받는다. 오류는 그대로 올린다"""
+        from app.prompts.voice_prompt import build_intent_hint_prompt
+
+        if not self._client:
+            return None
+        model = model or settings.gemini_model
+        response = self._client.models.generate_content(
+            model=model,
+            contents=build_intent_hint_prompt(text),
+            config=self._json_config(model),
+        )
+        if not response or not response.text:
+            return None
+        parsed = json_repair.loads(response.text)
+        return parsed if isinstance(parsed, dict) else None
+
     def _sync_generate_nlu(self, prompt: str) -> Optional[Dict[str, Any]]:
         if not self._client:
             return None
