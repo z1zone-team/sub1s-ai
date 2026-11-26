@@ -1,8 +1,7 @@
 from fastapi import APIRouter, File, UploadFile, Query
-from fastapi.concurrency import run_in_threadpool
-from app.dtos.response_dto import SttResponseDto
+from app.dtos.response_dto import IntentHintDto, SttResponseDto
 from app.errors.exceptions import InvalidAudioFormatException
-from app.pipelines.stt_pipeline import stt_pipeline
+from app.pipelines.speech_pipeline import SpeechPipeline
 
 router = APIRouter(prefix="/api/v1/ai", tags=["STT"])
 
@@ -26,10 +25,24 @@ async def transcribe_audio(
     if not content:
         raise InvalidAudioFormatException("업로드된 오디오 파일이 비어 있습니다.")
 
-    # 전사는 동기이고 CPU를 오래 써서 이벤트 루프를 막지 않도록 스레드풀에서 돌린다
-    return await run_in_threadpool(
-        stt_pipeline.transcribe,
-        audio_bytes=content,
-        filename=filename,
+    # 큐 워커와 같은 제공자 순서를 쓴다(기본 gemini, whisper). Whisper는 스레드에서 돌아 이벤트 루프를 막지 않는다
+    result = await _speech().transcribe(content, language=language)
+    return SttResponseDto(
+        transcript=result.transcript,
         language=language,
+        duration_sec=result.duration_sec,
+        processing_time_sec=result.processing_time_sec,
+        provider=result.provider,
+        fallback_from=result.fallback_from,
+        intent=IntentHintDto(**result.intent.to_dict()) if result.intent else None,
     )
+
+
+_pipeline = None
+
+
+def _speech() -> SpeechPipeline:
+    global _pipeline
+    if _pipeline is None:
+        _pipeline = SpeechPipeline.from_settings()
+    return _pipeline

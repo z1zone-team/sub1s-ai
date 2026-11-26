@@ -44,3 +44,16 @@ def _default_fake_whisper(request, monkeypatch):
     monkeypatch.setattr(SttPipeline, "_model", FakeWhisperModel())
     yield
     _forget_loaded_model()
+
+
+@pytest.fixture(autouse=True)
+def _no_real_gemini_speech(monkeypatch):
+    """테스트가 실제 Gemini를 부르지 않게 음성 인식 제공자를 Whisper(가짜 모델)로만 둔다.
+    Gemini 제공자는 test_speech_pipeline.py에서 가짜 클라이언트로 따로 시험한다"""
+    from app.configs.settings import settings
+    from app.routes import stt_route
+
+    monkeypatch.setattr(settings, "stt_providers", "whisper")
+    monkeypatch.setattr(stt_route, "_pipeline", None)
+    yield
+    monkeypatch.setattr(stt_route, "_pipeline", None)

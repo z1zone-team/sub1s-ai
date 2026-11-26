@@ -30,6 +30,21 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     nlu_timeout_sec: float = 2.0  # 2초 SLA 타임아웃
 
+    # 음성 인식 제공자 순서. 앞이 실패하거나 제한 시간을 넘기면 다음으로 넘어가고, 목록에 없어도 마지막에는 whisper를 쓴다
+    # (2026-11-26 운영 측정: gemini 2~5초, whisper small 11~14초)
+    stt_providers: str = "gemini,whisper"
+    # 음성 인식과 의도 힌트에 쓸 Gemini 모델, 앞에서부터. 쿼터가 모델마다 따로라(무료 키 2.5-flash 하루 20건)
+    # 앞 모델이 쿼터 초과로 쉬면 다음 모델을 쓴다. 비우면 gemini_model 하나
+    gemini_stt_models: str = "gemini-2.5-flash,gemini-3.5-flash-lite"
+    # Gemini 음성 인식 제한 시간. 넘기면 Whisper로 넘어가므로 Whisper 시간(약 12초)과 더해도 서버 제한(25초) 안이어야 한다
+    gemini_stt_timeout_sec: float = 6.0
+    # 429(쿼터 초과) 응답에 retryDelay가 없을 때 Gemini를 쉬는 시간
+    gemini_quota_cooldown_sec: float = 600.0
+    # 503(수요 과다) 뒤 Gemini를 쉬는 시간
+    gemini_unavailable_cooldown_sec: float = 30.0
+    # 받아 적은 문장에서 의도 힌트를 받는 제한 시간(서버가 규칙으로 풀지 못했을 때만 부른다)
+    intent_hint_timeout_sec: float = 3.0
+
 
     # 취향 문장 임베딩 (multilingual-e5-small ONNX 양자화본과 SentencePiece). 이미지 빌드 때 이 폴더에 받는다
     preference_embedding_model_dir: str = "/app/models/e5-small"
