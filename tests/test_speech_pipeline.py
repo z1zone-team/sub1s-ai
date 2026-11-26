@@ -318,3 +318,31 @@ def test_json_config_turns_thinking_off_per_model_generation():
     assert GeminiClient._json_config("gemini-2.5-flash").thinking_config.thinking_budget == 0
     lite = GeminiClient._json_config("gemini-3.5-flash-lite").thinking_config
     assert lite.thinking_budget is None and str(lite.thinking_level).endswith("MINIMAL")
+
+
+def test_first_object_unwraps_a_single_object_array():
+    from app.clients.gemini_client import first_object
+
+    payload = {"transcript": "강남역 가자", "origin": None, "destination": "강남", "mode": "OPTIMAL"}
+    assert first_object(payload) == payload
+    assert first_object([payload]) == payload
+    assert first_object([1, payload]) == payload
+    assert first_object([]) is None
+    assert first_object("강남역 가자") is None
+
+
+def test_transcribe_voice_sync_accepts_array_wrapped_json():
+    from types import SimpleNamespace
+
+    from app.clients.gemini_client import GeminiClient
+
+    client = GeminiClient(api_key="test")
+
+    class Models:
+        def generate_content(self, **kwargs):
+            return SimpleNamespace(text='[\n {"transcript": "서울역에서 잠실역까지", "origin": "서울", "destination": "잠실", "mode": "FASTEST"}\n]')
+
+    client._client = SimpleNamespace(models=Models())
+    result = client.transcribe_voice_sync(b"wav", "audio/wav", model="gemini-3.5-flash-lite")
+    assert result["transcript"] == "서울역에서 잠실역까지"
+    assert result["mode"] == "FASTEST"
