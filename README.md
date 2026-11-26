@@ -24,7 +24,7 @@ FastAPI 기반의 STT(음성 인식), 경로 선호 모델(10축), 취향 문장
 | `POST` | `/api/v1/ai/intent-hint` | 받아 적은 문장에서 출발지, 도착지, 경로 조건 힌트(Gemini). 쉬는 중이거나 키가 없으면 `{ available: false }` | 서버가 규칙으로 풀지 못한 문장에만 호출 |
 | `POST` | `/api/v1/ai/preference-vector/v2` | 선택한 경로와 대안의 피처로 10축 선호와 관측 신뢰도 | 경로 검색 때 2초 제한으로 호출 |
 | `POST` | `/api/v1/ai/preference-embedding` | 이동 목적, 경로 취향, 최근 고른 모드로 만든 취향 문장의 임베딩 | 경로 검색 때 2초 제한으로 호출(이웃 선호 2차 정렬) |
-| `POST` | `/api/v1/ai/nlu` | 전사문의 의도 분석(Gemini, 실패 시 규칙) | 쓰지 않음(서버 규칙 파서 사용) |
+| `POST` | `/api/v1/ai/nlu` | 전사문의 의도 분석(Gemini, 실패 시 규칙). 출발역이나 도착역을 찾지 못하면 422(예전에는 강남, 을지로입구로 채웠음) | 쓰지 않음(서버 규칙 파서와 `intent-hint` 사용) |
 | `POST` | `/api/v1/ai/briefing` | 경로 결과의 브리핑 문장 | 쓰지 않음(서버 규칙 문구 사용) |
 | `POST` | `/api/v1/ai/voice-process` | STT와 NLU를 한 번에 | 쓰지 않음 |
 

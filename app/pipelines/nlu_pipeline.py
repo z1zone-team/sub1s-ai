@@ -4,6 +4,7 @@ from typing import Optional
 from app.clients.gemini_client import GeminiClient
 from app.dtos.request_dto import RouteMode
 from app.dtos.response_dto import NluResponseDto
+from app.errors.exceptions import IntentNotUnderstoodException
 from app.guardrails.mode_validator import MODE_REASONS, ModeValidator
 from app.guardrails.station_validator import StationValidator
 
@@ -47,9 +48,8 @@ class NluPipeline:
         """
         cleaned_text = text.strip()
         if not cleaned_text:
-            return self._create_default_fallback(
-                "강남", "을지로입구", preferred_mode, "기본 최적 경로를 안내합니다."
-            )
+            # 예전에는 강남 -> 을지로입구를 지어내 돌려줬다. 말하지 않은 경로를 안내하지 않는다
+            raise IntentNotUnderstoodException("받아 적은 문장이 비어 있어요. 다시 말씀해 주세요.")
 
         # 1. Gemini 호출 시도 (2초 타임아웃 & JSON 스키마 강제)
         llm_result = await self.gemini_client.generate_nlu(cleaned_text)
@@ -106,38 +106,16 @@ class NluPipeline:
         detected_mode, mode_reason = self.mode_validator.detect_mode(cleaned_text)
         final_mode = preferred_mode if preferred_mode else detected_mode
 
-        # 역 추출 보정 (알 수 없는 경우 대표 역 지정)
-        if not fallback_origin and not fallback_dest:
-            fallback_origin, fallback_dest = "강남", "을지로입구"
-        elif fallback_origin and not fallback_dest:
-            fallback_dest = "을지로입구" if fallback_origin != "을지로입구" else "강남"
-        elif not fallback_origin and fallback_dest:
-            fallback_origin = "강남" if fallback_dest != "강남" else "을지로입구"
-        elif fallback_origin == fallback_dest:
-            fallback_dest = "을지로입구" if fallback_origin != "을지로입구" else "강남"
+        # 출발역이나 도착역을 찾지 못하면 대표 역(예전 강남, 을지로입구)으로 채우지 않고 알린다.
+        # 서버의 음성 흐름은 이 API를 쓰지 않고(규칙 분석과 intent-hint), 이 경로를 직접 부르는 쪽이 오류를 처리한다
+        if not fallback_origin or not fallback_dest or fallback_origin == fallback_dest:
+            raise IntentNotUnderstoodException()
 
         return NluResponseDto(
             origin_station_name=fallback_origin,
             dest_station_name=fallback_dest,
             preferred_mode=final_mode,
             reason=mode_reason,
-            confidence=0.90,
-            is_fallback=True,
-        )
-
-    def _create_default_fallback(
-        self,
-        origin: str,
-        dest: str,
-        preferred_mode: Optional[RouteMode],
-        reason: str,
-    ) -> NluResponseDto:
-        mode = preferred_mode or RouteMode.OPTIMAL
-        return NluResponseDto(
-            origin_station_name=origin,
-            dest_station_name=dest,
-            preferred_mode=mode,
-            reason=reason,
             confidence=0.90,
             is_fallback=True,
         )

@@ -89,3 +89,30 @@ async def test_nlu_pipeline_llm_hallucination_triggers_fallback():
     assert result.origin_station_name == "강남"
     assert result.dest_station_name == "사당"
     assert result.is_fallback is True
+
+
+@pytest.mark.asyncio
+async def test_empty_text_is_not_turned_into_a_made_up_route(mock_gemini_client):
+    """예전에는 빈 문장에 강남 -> 을지로입구를 돌려줬다. 말하지 않은 경로를 만들지 않는다"""
+    from app.errors.exceptions import IntentNotUnderstoodException
+
+    pipeline = NluPipeline(gemini_client=mock_gemini_client)
+    with pytest.raises(IntentNotUnderstoodException) as error:
+        await pipeline.parse_intent("   ")
+    assert error.value.status_code == 422
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "text",
+    [
+        "어디든 가고 싶어",  # 역이 없음
+        "사당역까지 가고 싶어",  # 출발역 없음(예전에는 강남으로 채움)
+    ],
+)
+async def test_missing_station_is_reported_instead_of_filled_in(mock_gemini_client, text):
+    from app.errors.exceptions import IntentNotUnderstoodException
+
+    pipeline = NluPipeline(gemini_client=mock_gemini_client)
+    with pytest.raises(IntentNotUnderstoodException):
+        await pipeline.parse_intent(text)
